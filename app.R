@@ -3,6 +3,7 @@ library(shiny)
 library(ggplot2)
 library(readr)
 
+# function for reading CSV files containing YC data, returns YC object
 ReadYieldCurveCsv <- function(file) {
 
   if (class(file) != "character") {
@@ -28,6 +29,20 @@ ReadYieldCurveCsv <- function(file) {
   return(YC.data)
 }
 
+# stress scenarios as a list of functions to be superimposed on real YC
+# stress.fun <- list()
+# stress.fun$no.stress  <- function(x) {rep(   0, length(x))}
+# stress.fun$p200bps    <- function(x) {rep( 200, length(x))}
+# stress.fun$m200bps    <- function(x) {rep(-200, length(x))}
+# stress.fun$asc200bps  <- approxfun(x = c(0.5, 50),
+#                                    y = c(0, 200),
+#                                    rule = 2)
+# stress.fun$desc200bps <- approxfun(x = c(0.5, 50),
+#                                    y = c(200, 0),
+#                                    rule = 2)
+# names(stress.fun) <- c("No stress", "+200 bps uniform shift", "-200 bps uniform shift",
+#                        "linear increase to +200 bps", "linear decrease from +200 bps")
+
 # UI - SHINY APP ----------------------------------------------------------------------------------
 ui <-
   navbarPage("YC App",
@@ -43,7 +58,12 @@ ui <-
                  )
                ),
                mainPanel(
-                 tableOutput("yc.data")
+                 tabsetPanel(
+                   tabPanel("Table",
+                            tableOutput("yc.table")),
+                   tabPanel("Graph",
+                            plotOutput("yc.plot")))
+
                ))),
     # panel displays, loads and creates modifications to YC
     tabPanel("YC - modification",
@@ -67,9 +87,26 @@ server <- function(input, output) {
         data.frame(x = c(0), y = c(0))
       else
         ReadYieldCurveCsv(file = inFile$datapath)
-  })
+    })
 
-  output$yc.data <- renderTable(YC.data()$data)
+  YC.curve <-
+    reactive({
+      approxfun(x = YC.data()$data[[1]],
+                y = YC.data()$data[[2]],
+                rule = 2)
+    })
+
+  output$yc.table  <-
+    renderTable(
+      YC.data()$data)
+
+  output$yc.plot <-
+    renderPlot(
+      # draw the YC function using ggplot
+      ggplot(data.frame(x = c(0, max(YC.data()$data[[1]]))), aes(x)) +
+        stat_function(fun = YC.curve()) +
+        labs(x = colnames(YC.data()$data)[1], y = colnames(YC.data()$data)[2])
+    )
 }
 
 shinyApp(ui = ui, server = server)
