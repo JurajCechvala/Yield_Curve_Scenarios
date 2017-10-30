@@ -79,7 +79,9 @@ ui <-
     tabPanel("YC - scenario",
              sidebarLayout(
                sidebarPanel(),
-               mainPanel())))
+               mainPanel(
+                 plotOutput("scenario.plot")
+               ))))
 
 # SERVER - SHINY APP ------------------------------------------------------------------------------
 server <- function(input, output) {
@@ -114,7 +116,12 @@ server <- function(input, output) {
     )
 
   funkcia <- reactive({
-    function(x) {eval(parse(text = input$mod.function))}
+    function(x) {
+      if (any(grepl("x", input$mod.function)))
+        eval(parse(text = input$mod.function))
+      else
+        rep(as.numeric(input$mod.function), length(x))
+    }
   })
 
   output$mod.plot <-
@@ -122,6 +129,18 @@ server <- function(input, output) {
       # draw a graph of modification function
       ggplot(data.frame(x = c(0, 600)), aes(x)) +
         stat_function(fun = funkcia())
+    )
+
+  scenario.function <- reactive({
+    function(x) {
+      funkcia()(x) + YC.curve()(x)
+    }
+  })
+
+  output$scenario.plot <-
+    renderPlot(
+      ggplot(data.frame(x = c(0, 600)), aes(x)) +
+        stat_function(fun = scenario.function())
     )
 }
 
