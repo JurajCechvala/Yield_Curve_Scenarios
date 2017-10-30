@@ -68,8 +68,13 @@ ui <-
     # panel displays, loads and creates modifications to YC
     tabPanel("YC - modification",
              sidebarLayout(
-               sidebarPanel(),
-               mainPanel())),
+               sidebarPanel(
+                 textInput("mod.function",
+                           label = "Insert equation",
+                           value = "x")),
+               mainPanel(
+                 plotOutput("mod.plot")
+               ))),
     # panel shows and saves final YC - combination of actual YC and a modification (selectable)
     tabPanel("YC - scenario",
              sidebarLayout(
@@ -106,6 +111,17 @@ server <- function(input, output) {
       ggplot(data.frame(x = c(0, max(YC.data()$data[[1]]))), aes(x)) +
         stat_function(fun = YC.curve()) +
         labs(x = colnames(YC.data()$data)[1], y = colnames(YC.data()$data)[2])
+    )
+
+  funkcia <- reactive({
+    function(x) {eval(parse(text = input$mod.function))}
+  })
+
+  output$mod.plot <-
+    renderPlot(
+      # draw a graph of modification function
+      ggplot(data.frame(x = c(0, 600)), aes(x)) +
+        stat_function(fun = funkcia())
     )
 }
 
