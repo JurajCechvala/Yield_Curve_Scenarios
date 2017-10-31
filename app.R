@@ -69,11 +69,11 @@ ui <-
     tabPanel("YC - modification",
              sidebarLayout(
                sidebarPanel(
-                 textInput("mod.function",
+                 textInput("modification.function",
                            label = "Insert equation",
                            value = "x")),
                mainPanel(
-                 plotOutput("mod.plot")
+                 plotOutput("modification.plot")
                ))),
     # panel shows and saves final YC - combination of actual YC and a modification (selectable)
     tabPanel("YC - scenario",
@@ -103,6 +103,19 @@ server <- function(input, output) {
                 rule = 2)
     })
 
+  scenario.function <- reactive({
+    function(x) {funkcia()(x) + YC.curve()(x)}
+  })
+
+  funkcia <- reactive({
+    function(x) {
+      if (any(grepl("x", input$mod.function)))
+        eval(parse(text = input$mod.function))
+      else
+        rep(as.numeric(input$mod.function), length(x))
+    }
+  })
+
   output$yc.table  <-
     renderTable(
       YC.data()$data)
@@ -115,14 +128,7 @@ server <- function(input, output) {
         labs(x = colnames(YC.data()$data)[1], y = colnames(YC.data()$data)[2])
     )
 
-  funkcia <- reactive({
-    function(x) {
-      if (any(grepl("x", input$mod.function)))
-        eval(parse(text = input$mod.function))
-      else
-        rep(as.numeric(input$mod.function), length(x))
-    }
-  })
+
 
   output$mod.plot <-
     renderPlot(
@@ -130,12 +136,6 @@ server <- function(input, output) {
       ggplot(data.frame(x = c(0, 600)), aes(x)) +
         stat_function(fun = funkcia())
     )
-
-  scenario.function <- reactive({
-    function(x) {
-      funkcia()(x) + YC.curve()(x)
-    }
-  })
 
   output$scenario.plot <-
     renderPlot(
